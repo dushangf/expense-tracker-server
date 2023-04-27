@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/libs/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { encrypt } from 'src/utils/encrypt';
@@ -8,6 +8,17 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(user: Prisma.UserCreateInput) {
+    const existingUser = await this.prisma.user.findFirst({
+      where: { email: user.email },
+    });
+
+    if (existingUser) {
+      throw new HttpException(
+        'Email already registered.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     user.password = await encrypt(user.password);
     const savedUser = await this.prisma.user.create({ data: user });
 
